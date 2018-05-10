@@ -1,0 +1,38 @@
+---
+title: "Homework 3"
+author: "Austin Sell"
+date: "May 24, 2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(simcf)
+```
+
+# Part A
+
+```{r}
+data <- read.csv("Data/statehouse.csv")
+data <- subset(data,data$GovCycle==1)
+data <- subset(data,data$HouseTerm==2)
+
+data$DHSlag1 <- lagpanel(data$DemHouseShare, data$FIPS, data$Year, 1)
+data$DHSlag2 <- lagpanel(data$DemHouseShare, data$FIPS, data$Year, 2)
+data$DHSlag3 <- lagpanel(data$DemHouseShare, data$FIPS, data$Year, 3)
+data$DHSlag4 <- lagpanel(data$DemHouseShare, data$FIPS, data$Year, 4)
+```
+
+# Part B
+
+```{r}
+statelist <- unique(data$State)
+data.state <- NULL
+
+for (i in 1:length(statelist)){
+  data.state[[i]] <- subset(data,data$State==statelist[i])
+  acf(data.state[[i]])
+  pacf(data.state[[i]])
+}
+```
