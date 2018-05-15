@@ -9,6 +9,19 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 
 library(simcf)
+library(tseries)
+library(plm)
+library(nlme)
+
+detrend.ts <- function(ts, period){
+  index <- seq.int(length(period))
+  fit <- lm(ts ~ index)
+  detrend <- NULL
+  for (i in 1:length(ts)){
+    detrend[i] <- ts[i] - fit$coefficients[2]*index[i]
+  }
+  return(detrend)
+}
 ```
 
 # Part A
@@ -18,10 +31,10 @@ data <- read.csv("Data/statehouse.csv")
 data <- subset(data,data$GovCycle==1)
 data <- subset(data,data$HouseTerm==2)
 
-data$DHSlag1 <- lagpanel(data$DemHouseShare, data$FIPS, data$Year, 1)
-data$DHSlag2 <- lagpanel(data$DemHouseShare, data$FIPS, data$Year, 2)
-data$DHSlag3 <- lagpanel(data$DemHouseShare, data$FIPS, data$Year, 3)
-data$DHSlag4 <- lagpanel(data$DemHouseShare, data$FIPS, data$Year, 4)
+data$DemHouseShareL1 <- lagpanel(data$DemHouseShare, data$FIPS, data$Year, 1)
+data$DemHouseShareL2 <- lagpanel(data$DemHouseShare, data$FIPS, data$Year, 2)
+data$DemHouseShareL3 <- lagpanel(data$DemHouseShare, data$FIPS, data$Year, 3)
+data$DemHouseShareL4 <- lagpanel(data$DemHouseShare, data$FIPS, data$Year, 4)
 ```
 
 # Part B
@@ -29,10 +42,43 @@ data$DHSlag4 <- lagpanel(data$DemHouseShare, data$FIPS, data$Year, 4)
 ```{r}
 statelist <- unique(data$State)
 data.state <- NULL
+adf.pvalue <- NULL
+pp.pvalue <- NULL
+adf.pvalue.dt <- NULL
+pp.pvalue.dt <- NULL
 
 for (i in 1:length(statelist)){
   data.state[[i]] <- subset(data,data$State==statelist[i])
-  acf(data.state[[i]])
-  pacf(data.state[[i]])
+  
+  plot(data.state[[i]]$DemHouseShare, type="l")
+  acf(data.state[[i]]$DemHouseShare)
+  pacf(data.state[[i]]$DemHouseShare)
+  
+  plot(detrend.ts(ts=data.state[[i]]$DemHouseShare, period=data.state[[i]]$Year), type="l")
+  acf(detrend.ts(ts=data.state[[i]]$DemHouseShare, period=data.state[[i]]$Year))
+  pacf(detrend.ts(ts=data.state[[i]]$DemHouseShare, period=data.state[[i]]$Year))
+  
+  adf.pvalue[i] <- adf.test(data.state[[i]]$DemHouseShare)$p.value
+  pp.pvalue[i] <- pp.test(data.state[[i]]$DemHouseShare)$p.value
+  
+  adf.pvalue.dt[i] <- adf.test(detrend.ts(ts=data.state[[i]]$DemHouseShare, period=data.state[[i]]$Year))$p.value
+  pp.pvalue.dt[i] <- pp.test(detrend.ts(ts=data.state[[i]]$DemHouseShare, period=data.state[[i]]$Year))$p.value
 }
+
+hist(adf.pvalue)
+hist(pp.pvalue)
+
+hist(adf.pvalue.dt)
+hist(pp.pvalue.dt)
+
+ts <- with(data,
+           data.frame(split(DemHouseShare, as.character(State))))
+purtest(ts, pmax=4, exo="intercept", test="ips")
+purtest(ts, pmax=4, exo="trend", test="ips")
+```
+
+# Part C
+
+```{r}
+
 ```
